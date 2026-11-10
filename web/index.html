@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>corral</title>
+  </head>
+  <body>
+    <main>
+      <h1>corral</h1>
+      <p class="lede">Short links, and how often each is followed.</p>
+      <form id="new-link">
+        <input name="url" type="url" placeholder="https://example.com/a/long/address" required />
+        <button type="submit">Shorten</button>
+      </form>
+      <p id="error" role="alert" hidden></p>
+      <table>
+        <thead>
+          <tr><th>Link</th><th>Goes to</th><th class="hits">Hits</th></tr>
+        </thead>
+        <tbody id="links"></tbody>
+      </table>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
