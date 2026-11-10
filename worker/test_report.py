@@ -22,6 +22,10 @@ class Report(unittest.TestCase):
     def test_an_empty_report_says_so(self):
         self.assertEqual(render([]), "no links yet")
 
+    def test_the_table_has_a_line_per_link_under_its_header(self):
+        lines = render(ranked(LINKS, top=2)).splitlines()
+        self.assertEqual(len(lines), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

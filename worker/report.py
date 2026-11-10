@@ -11,6 +11,7 @@ import os
 import sys
 
 import httpx
+from texttable import Texttable
 
 
 def ranked(links: list[dict], top: int) -> list[dict]:
@@ -26,13 +27,14 @@ def ranked(links: list[dict], top: int) -> list[dict]:
 def render(rows: list[dict]) -> str:
     if not rows:
         return "no links yet"
-    width = max(len(row["slug"]) for row in rows)
-    lines = [f"{'link':<{width}}  {'hits':>6}  {'share':>6}  goes to"]
+    table = Texttable(max_width=0)
+    table.set_deco(Texttable.HEADER)
+    table.set_cols_dtype(["t", "i", "t", "t"])
+    table.set_cols_align(["l", "r", "r", "l"])
+    table.header(["link", "hits", "share", "goes to"])
     for row in rows:
-        lines.append(
-            f"{row['slug']:<{width}}  {row['hits']:>6}  {row['share']:>6.1%}  {row['url']}"
-        )
-    return "\n".join(lines)
+        table.add_row([row["slug"], row["hits"], f"{row['share']:.1%}", row["url"]])
+    return table.draw()
 
 
 def fetch(api: str) -> list[dict]:
