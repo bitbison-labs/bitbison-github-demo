@@ -4,10 +4,14 @@
 //! GET  /links        every link, most followed first
 //! GET  /{slug}       a redirect to the link's URL, counted as a hit
 //! GET  /healthz      "ok"
+//! GET  /license      the license text
 //!
 //! Links are kept in memory: this is a demo application.
 
 mod store;
+
+/// The license text, fetched when the API is built (build.rs).
+const LICENSE: &str = include_str!(concat!(env!("OUT_DIR"), "/LICENSE-MIT"));
 
 use std::sync::Arc;
 
@@ -50,6 +54,7 @@ async fn follow(State(store): State<Arc<Store>>, Path(slug): Path<String>) -> Re
 fn app(store: Arc<Store>) -> Router {
     Router::new()
         .route("/healthz", get(|| async { "ok" }))
+        .route("/license", get(|| async { LICENSE }))
         .route("/links", get(list).post(create))
         .route("/{slug}", get(follow))
         .with_state(store)
