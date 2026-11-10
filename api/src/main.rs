@@ -7,10 +7,12 @@
 //!
 //! Links are kept in memory: this is a demo application.
 
+mod logger;
 mod store;
 
 use std::sync::Arc;
 
+use anyhow::Context;
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -33,7 +35,9 @@ async fn create(State(store): State<Arc<Store>>, Json(new): Json<NewLink>) -> Re
         let error = json!({"error": "url must start with http:// or https://"});
         return (StatusCode::UNPROCESSABLE_ENTITY, Json(error)).into_response();
     }
-    (StatusCode::CREATED, Json(store.add(new.url))).into_response()
+    let link = store.add(new.url);
+    log::info!("new link {} -> {}", link.slug, link.url);
+    (StatusCode::CREATED, Json(link)).into_response()
 }
 
 async fn list(State(store): State<Arc<Store>>) -> Response {
@@ -56,9 +60,14 @@ fn app(store: Arc<Store>) -> Router {
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> anyhow::Result<()> {
+    logger::init();
     let addr = std::env::var("CORRAL_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("corral-api {} on http://{addr}", env!("CARGO_PKG_VERSION"));
-    axum::serve(listener, app(Arc::new(Store::default()))).await
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .with_context(|| format!("corral-api could not listen on {addr}"))?;
+    log::info!("corral-api {} on http://{addr}", env!("CARGO_PKG_VERSION"));
+    axum::serve(listener, app(Arc::new(Store::default())))
+        .await
+        .context("corral-api stopped serving")
 }
