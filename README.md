@@ -370,7 +370,7 @@ Under `with:` on the review job:
 |---|---|
 | Have Claude read every change and request nothing | `dependency-grants: false` |
 | Block a merge until every change is covered | `fail-on-uncovered: true`, and require the review job |
-| Decide which of Claude's audits wait for a person | an administrator runs `bitbison settings --audit-person-from-risk none\|low\|medium\|high\|critical` (`medium` by default) |
+| Decide which of Claude's audits wait for a person | an administrator runs `bitbison settings --audit-person-from-risk none\|low\|medium\|high\|critical` (`high` by default) |
 | Keep your audits from being proposed to the registry | `bitbison settings --share-audits false` |
 | Adopt what a branch pinned before Bitbison first saw it | a person runs `bitbison grant baseline` on the default branch |
 | Never let a flagged build through without a person | `gate: block` |
