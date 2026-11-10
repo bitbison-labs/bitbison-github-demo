@@ -59,6 +59,12 @@ fn app(store: Arc<Store>) -> Router {
 async fn main() -> std::io::Result<()> {
     let addr = std::env::var("CORRAL_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("corral-api {} on http://{addr}", env!("CARGO_PKG_VERSION"));
+    let banner = format!("corral-api {} on http://{addr}", env!("CARGO_PKG_VERSION"));
+    if atty::is(atty::Stream::Stdout) {
+        // Bold at a terminal, plain in a log.
+        println!("\x1b[1m{banner}\x1b[0m");
+    } else {
+        println!("{banner}");
+    }
     axum::serve(listener, app(Arc::new(Store::default()))).await
 }
