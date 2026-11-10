@@ -1,0 +1,46 @@
+name: Bitbison review
+
+# The dependency review, with bitbison-labs/github: on each pull request,
+# and on each push to master, the direct dependencies and submodules the
+# change adds, upgrades or removes, in every component's lockfile
+# (api/Cargo.lock, web/package-lock.json, worker/uv.lock, cli/go.sum), each
+# dependency taken through the organization's grant workflow, and Claude for
+# what is still uncovered. A pull request's review is one summary comment; a
+# push's is on its job's summary, since there is no pull request to comment
+# on. A change that touches no dependency asks Claude nothing.
+#
+# Every push, tag, deletion and run asked for by hand also records the state
+# of the ref checked out, so a grant shows where it is in use: everything
+# its tree pins, and every branch and tag the repository has, so a branch or
+# tag that is gone ends. No paths filter: each push marks its branch as
+# seen.
+#
+# It does not hold up the change or fail it, and it runs in a job of its
+# own, never on the build's runner. It reads the secrets the build
+# integration already has (BITBISON_INSTANCE, BITBISON_CHANNEL) and two
+# more: BITBISON_CI_TOKEN and ANTHROPIC_API_KEY. The build's own review is
+# the gate in bitbison.yml.
+
+on:
+  pull_request:
+  push:
+    branches: ['**']
+    tags: ['**']
+  delete:
+  workflow_dispatch:
+
+jobs:
+  review:
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    uses: bitbison-labs/github/.github/workflows/review.yml@master
+    # Opt-in: Claude also judges whether the advisories of the direct
+    # dependencies a change adds or upgrades are relevant to this code, and
+    # names the way out, from this severity up (high would be the usual
+    # choice; low here, so the demo's unrated advisory is judged too). The
+    # summary lists every advisory either way.
+    with:
+      vulnerabilities: low
+    secrets: inherit
