@@ -90,7 +90,7 @@ upgrades and where it stands with your organization:
 >
 > | | Release | Change | Where it stands |
 > |---|---|---|---|
-> | ✅ | `npm/vite@6.4.6` | upgraded from 6.4.3 | Granted |
+> | ✅ | `npm/vite@6.4.6` | upgraded from 6.4.3 | Already granted |
 
 A **grant** means your organization allows that release. Bitbison settles
 most changes by itself, with no model: a release already granted, one your
@@ -100,8 +100,8 @@ See it here:
 
 | Pull request | What it changes | The comment says |
 |---|---|---|
-| [#2](../../pull/2) | upgrades a package to a release new to the organization | `upgraded from 6.4.3`, **Granted** |
 | [#6](../../pull/6) | adds a package new to the organization | **Granted**: the review's own request was granted |
+| [#2](../../pull/2) | upgrades a package | `upgraded from 6.4.3`, **Already granted** |
 | [#5](../../pull/5) | adds two packages the organization uses elsewhere | **Already granted** |
 | [#3](../../pull/3) | upgrades two packages, the lockfile alone | `upgraded from …`, **Already granted** |
 | [#7](../../pull/7) | removes a direct dependency | **Removed**, nothing to decide |
@@ -148,18 +148,18 @@ and where one line settles it, the comment carries a suggested change you
 can commit from the pull request. From [#9](../../pull/9), on
 `api/Cargo.toml`:
 
-> **rustpython-vm 0.5.0: not covered. The registry reviewed it as
-> `secrets-exposure`, and it also has a high-severity advisory.**
+> **`rustpython-vm 0.5.0`: not covered. The registry has reviewed it and
+> found it exposes secrets.**
 >
-> A person reviewed this and concluded that rustpython-vm 0.3.0 to 0.5.0
-> embeds its compile environment in every program that links it. That
-> review stands for the organization, so I did not audit this release. Only
-> a person can override the review.
+> **What the registry found:** The registry's review covers rustpython-vm
+> 0.3.0 to 0.5.0. Each of these versions builds its compile environment
+> into every program that links it. That review stands for the
+> organization, so I did not audit this release. Only a person can override
+> it.
 >
-> **Way out:** `cargo/rustpython-vm@0.6.0` is already covered. Its analysis
-> is clean with no findings, and one repository in the organization already
-> uses it. This repository has no Rust code using the crate, so no code
-> changes are needed.
+> **Way out:** Use `cargo/rustpython-vm@0.6.0`. It is already covered by
+> the organization's grant (analysis clean, risk none, 0 findings), and it
+> is the version this organization already uses in another repository.
 >
 > ```suggestion
 > rustpython-vm = "0.6.0"
@@ -167,16 +167,16 @@ can commit from the pull request. From [#9](../../pull/9), on
 
 And from [#11](../../pull/11), where the fix needs no manifest change:
 
-> **CVE-2022-24713 (high): regex denial of service. Affected.**
+> **CVE-2022-24713 / GHSA-m5pq-gvj9-9vr8 (high): regex denial of service.
+> Affected.**
 >
-> This code compiles an untrusted pattern. `GET /links?match=<regex>` hands
-> the query string straight to `regex::Regex::new(&pattern)`
-> (`api/src/main.rs:49`), so anyone who can reach the endpoint can tie up a
-> worker with a single request.
+> `GET /links?match=<regex>` passes the caller's query string straight to
+> `regex::Regex::new(&pattern)` (`api/src/main.rs:49`), so any client can
+> tie up the server with one request.
 >
-> **Way out:** upgrade to `>=1.5.5`. The requirement `"1.5.4"` means
-> `^1.5.4`, so 1.5.5 already satisfies it. Only the lockfile needs to
-> change, with no code changes: `cargo update -p regex --precise 1.5.5`.
+> **Fix:** 1.5.5 fixes it, and the requirement `"1.5.4"` already allows it.
+> Only the lockfile needs to change, with no code changes:
+> `cargo update -p regex --precise 1.5.5`
 
 Nothing here blocks the merge. To block it until every change is covered,
 set `fail-on-uncovered: true` and make the review job a required check.
@@ -196,6 +196,12 @@ no dependency says nothing.
 Every other push, every tag and every deletion records what that ref pins,
 with no review. Each grant in the Bitbison console then shows where its
 release is in use, since when, and when it stopped.
+
+See it here, on the job summary of each run: the pushes that merged
+[#1](../../actions/runs/42774622516), [#2](../../actions/runs/42775246983)
+and [#3](../../actions/runs/42775311875) list what each brought, all
+covered. The [first push](../../actions/runs/42774310833), which added the
+workflow, only recorded the branch: its baseline.
 
 ### 6. Capture your build
 
@@ -276,13 +282,13 @@ next step. From [#14](../../pull/14)'s check:
 > | high | Build script fetched what the build compiled, linked or ran | `corral-api@0.1.0` | build | open |
 > | high | Downloaded file compiled into the artifact | `…/out/LICENSE-MIT` | artifact | open |
 >
-> **Pinning and verification.** Neither is in place. The URL tracks the
-> moving `main` branch, not a commit SHA or tag. No checksum or signature
-> is checked before the content is used.
+> **Worst first: unpinned, unchecked remote content in the shipped
+> binary.** **Not pinned:** the URL follows the moving `main` branch, not a
+> commit SHA. **Not checked:** no digest or signature is compared before
+> use.
 >
-> **egress — corral-api@0.1.0 (high): real risk.** The build script fetches
-> an unpinned, unverified file. *Next:* remove the curl call and commit
-> `LICENSE-MIT` to the repo, then `include_str!` it from the source tree.
+> **egress, corral-api@0.1.0 (high): real risk.** Next step: vendor
+> `LICENSE-MIT` into the repo and `include_str!` it from there.
 >
 > **Gate (`agent`): failed.** Claude found a real risk.
 
@@ -379,7 +385,7 @@ Under `with:` on the review job:
 | No dependency changes | [#4](../../pull/4) | no comment |
 | Packages already trusted | [#5](../../pull/5) | Already granted |
 | A new package | [#6](../../pull/6) | Granted |
-| An upgrade that fixes advisories | [#2](../../pull/2) (merged) | upgraded, Granted |
+| An upgrade that fixes advisories | [#2](../../pull/2) (merged) | upgraded, Already granted |
 | Routine upgrades | [#3](../../pull/3) (merged) | upgraded, Already granted |
 | A dependency removed | [#7](../../pull/7) | Removed |
 | A submodule moved | [#8](../../pull/8) | listed for a person |
