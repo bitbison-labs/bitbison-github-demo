@@ -256,10 +256,12 @@ Add the gate as a job between your build jobs and whatever ships them, with
 ```
 
 **What you see:** a check on the commit, **Bitbison build report**, in the
-pull request's Checks tab and on the gate job's summary: each job's verdict
-beside the default branch's, the findings, every host the build connected
-to, what it produced, its dependencies in numbers, and every package it
-resolved that an advisory names.
+pull request's Checks tab and on the gate job's summary. It leads with the
+gate's decision, the run's verdict and each job's beside the default
+branch's, then the findings. What the build did besides is folded under
+them: every host it connected to, what it produced, its dependencies in
+numbers, and every package it resolved that an advisory names. A clean
+build is a dozen lines.
 
 `gate: report` never fails the job. When you are ready, `block` fails a
 build that is not clean, and `agent` lets Claude decide whether what was
@@ -273,24 +275,23 @@ See it here, with `gate: agent`:
 | [#13](../../pull/13) | a build script looks up the latest Rust version | flagged; Claude finds no real risk; passes, publish runs |
 | [#14](../../pull/14) | a build script compiles an unpinned, unverified download into the API | flagged; Claude finds a real risk; fails, publish is skipped |
 
-When a build is flagged, Claude's analysis follows the report: what the
-change did, what the build did, and its decision for each finding with the
-next step. From [#14](../../pull/14)'s check:
+When a build is flagged, Claude's sentence on it follows the jobs, and
+under the findings its verdict and next step for each; its analysis in full
+is folded below. From [#14](../../pull/14)'s check:
 
-> | Severity | Finding | Subject | Affects | |
-> |---|---|---|---|---|
-> | high | Build script fetched what the build compiled, linked or ran | `corral-api@0.1.0` | build | open |
-> | high | Downloaded file compiled into the artifact | `…/out/LICENSE-MIT` | artifact | open |
->
-> **Worst first: unpinned, unchecked remote content in the shipped
-> binary.** **Not pinned:** the URL follows the moving `main` branch, not a
-> commit SHA. **Not checked:** no digest or signature is compared before
-> use.
->
-> **egress, corral-api@0.1.0 (high): real risk.** Next step: vendor
-> `LICENSE-MIT` into the repo and `include_str!` it from there.
->
 > **Gate (`agent`): failed.** Claude found a real risk.
+>
+> **⚠️ Flagged.** Run `42775389107-1`: 3 open findings in 4 jobs, against
+> `master`'s run `42776385308-1`.
+>
+> PR #14 adds an `api/build.rs` that uses curl to download LICENSE-MIT from
+> the `main` branch of rust-lang/rust. Nothing pins or checks the download,
+> and `include_str!` builds it into the shipped corral-api binary. All
+> three open findings are this one download, and each is a real risk.
+>
+> | Finding | Real risk | Why | Next step |
+> |---|---|---|---|
+> | `egress` `corral-api@0.1.0` | **yes** | … The URL points at a moving branch, nothing checks a digest, and the build compiles the result. | Remove the download from build.rs. Commit the license text to the repo (for example `api/LICENSE-MIT`) and use `include_str!("../LICENSE-MIT")`. … |
 
 ## Quick reference
 
