@@ -178,8 +178,29 @@ And from [#11](../../pull/11), where the fix needs no manifest change:
 > Only the lockfile needs to change, with no code changes:
 > `cargo update -p regex --precise 1.5.5`
 
-Nothing here blocks the merge. To block it until every change is covered,
-set `fail-on-uncovered: true` and make the review job a required check.
+By default, the dependency review job only reports (`fail-on: never`), so
+nothing here blocks the merge. With any `fail-on` setting, it reports one
+of these three states in the summary comment and the job annotation:
+
+| State | What it means | Job annotation |
+|---|---|---|
+| 🟥 Denied | your organization has said no to at least one change: a `deny` rule, the built-in rule for a release reviewed or reported as malicious, an approved deny audit, or a revoked grant | error |
+| 🟨 Needs a person | no change is denied, but at least one has no grant yet and is waiting on a person | warning |
+| 🟩 Covered | every change has a grant | notice |
+
+An error annotation does not by itself fail the job. `fail-on` controls
+when the job fails, as shown below. To block merges, choose `denied` or
+`uncovered` and make the review job a required check:
+
+| `fail-on` | 🟥 Denied | 🟨 Needs a person | 🟩 Covered |
+|---|---|---|---|
+| `never` (the default) | passes | passes | passes |
+| `denied` | **fails** | passes | passes |
+| `uncovered` | **fails** | **fails** | passes |
+
+To treat a review conclusion or an advisory as a reason to deny a change,
+add a `deny` rule in Bitbison. `fail-on` still controls whether that denial
+fails the job.
 
 ### 5. Merge, and let the push be reviewed
 
@@ -344,10 +365,13 @@ Under `with:` on the review job:
 |---|---|---|
 | `vulnerabilities` | `off` | `critical`, `high`, `medium` or `low`: the least severity at which Claude judges whether an advisory reaches your code. An unrated advisory counts as `low` |
 | `dependency-grants` | `true` | `false`: the review only reads, and requests nothing |
-| `fail-on-uncovered` | `false` | `true`: the job fails while a change is uncovered |
+| `fail-on` | `never` | `never`: only reports; `denied`: fails only on a denied change; `uncovered`: fails on any change without a grant |
 | `track` | `all` | what is recorded besides the default branch: `branches`, `tags`, both, or `default-branch` for it alone |
 | `model` | the action's | the Claude model |
 | `runs-on` | `"ubuntu-latest"` | the runner, as JSON |
+
+A failed review job blocks a merge only when it is a required check.
+`fail-on-uncovered: true` is the old spelling of `fail-on: uncovered`.
 
 ### Gate options
 
@@ -369,7 +393,8 @@ Under `with:` on the review job:
 | To | Do |
 |---|---|
 | Have Claude read every change and request nothing | `dependency-grants: false` |
-| Block a merge until every change is covered | `fail-on-uncovered: true`, and require the review job |
+| Block a merge only when your organization has denied a change | `fail-on: denied`, and make the review job a required check |
+| Block a merge until every change has a grant | `fail-on: uncovered`, and make the review job a required check |
 | Decide which of Claude's audits wait for a person | an administrator runs `bitbison settings --audit-person-from-risk none\|low\|medium\|high\|critical` (`high` by default) |
 | Keep your audits from being proposed to the registry | `bitbison settings --share-audits false` |
 | Adopt what a branch pinned before Bitbison first saw it | a person runs `bitbison grant baseline` on the default branch |
