@@ -134,6 +134,13 @@ jobs:
           token: ${{ secrets.BITBISON_TOKEN }}
           instance: ${{ secrets.BITBISON_INSTANCE }}
 
+      # A pinned Go, not whichever the runner image carries: the build
+      # report lists the advisories of the toolchain that built.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.11'
+          cache: false
+
       - run: go test ./...
       - run: go build -trimpath -o corral .
 
