@@ -18,8 +18,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use serde::Deserialize;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
 
 use store::Store;
 
@@ -28,10 +27,17 @@ struct NewLink {
     url: String,
 }
 
+#[derive(Serialize)]
+struct Problem {
+    error: &'static str,
+}
+
 async fn create(State(store): State<Arc<Store>>, Json(new): Json<NewLink>) -> Response {
     if !(new.url.starts_with("http://") || new.url.starts_with("https://")) {
-        let error = json!({"error": "url must start with http:// or https://"});
-        return (StatusCode::UNPROCESSABLE_ENTITY, Json(error)).into_response();
+        let problem = Problem {
+            error: "url must start with http:// or https://",
+        };
+        return (StatusCode::UNPROCESSABLE_ENTITY, Json(problem)).into_response();
     }
     (StatusCode::CREATED, Json(store.add(new.url))).into_response()
 }
