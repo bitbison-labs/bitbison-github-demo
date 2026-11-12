@@ -1,13 +1,14 @@
 // corral: the link shortener's command-line client.
 //
 //	corral add https://example.com/a/long/address
-//	corral ls
+//	corral ls [--json]
 //
 // It talks to the corral API at --api, or CORRAL_API, or
 // http://127.0.0.1:8080.
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -42,7 +43,8 @@ func main() {
 		},
 	})
 
-	root.AddCommand(&cobra.Command{
+	var asJSON bool
+	ls := &cobra.Command{
 		Use:   "ls",
 		Short: "List every link, most followed first",
 		Args:  cobra.NoArgs,
@@ -51,10 +53,17 @@ func main() {
 			if err != nil {
 				return err
 			}
+			if asJSON {
+				encoder := json.NewEncoder(cmd.OutOrStdout())
+				encoder.SetIndent("", "  ")
+				return encoder.Encode(links)
+			}
 			fmt.Fprint(cmd.OutOrStdout(), Table(links))
 			return nil
 		},
-	})
+	}
+	ls.Flags().BoolVar(&asJSON, "json", false, "print the links as JSON")
+	root.AddCommand(ls)
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "corral:", err)
