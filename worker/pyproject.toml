@@ -5,6 +5,7 @@ description = "corral's reporting worker: which links were followed, and how oft
 requires-python = ">=3.12"
 dependencies = [
     "httpx==0.28.1",
+    "texttable==1.7.2",
 ]
 
 [tool.uv]
