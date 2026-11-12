@@ -148,18 +148,24 @@ and where one line settles it, the comment carries a suggested change you
 can commit from the pull request. From [#9](../../pull/9), on
 `api/Cargo.toml`:
 
-> **`rustpython-vm 0.5.0`: not covered. The registry has reviewed it and
-> found it exposes secrets.**
+> **`cargo/rustpython-vm@0.5.0` is not covered. The registry reviewed it
+> and concluded `secrets-exposure`.**
 >
-> **What the registry found:** The registry's review covers rustpython-vm
-> 0.3.0 to 0.5.0. Each of these versions builds its compile environment
-> into every program that links it. That review stands for the
-> organization, so I did not audit this release. Only a person can override
-> it.
+> **What the registry found:** A person at the registry reviewed this
+> release. They concluded that rustpython-vm 0.3.0 through 0.5.0 compiles
+> its build environment into every program that links it. …
 >
-> **Way out:** Use `cargo/rustpython-vm@0.6.0`. It is already covered by
-> the organization's grant (analysis clean, risk none, 0 findings), and it
-> is the version this organization already uses in another repository.
+> **What happened:** `bitbison ci` requested this release, and the request
+> was refused as `review`. A registry review is final for the
+> organization, so I did not audit the release. Only a person can override
+> the review.
+>
+> **Next step:** pick one of these.
+> 1. **Drop the dependency.** Nothing in the code uses it, so this is the
+>    simplest way out.
+> 2. **Move to 0.6.0.** `cargo/rustpython-vm@0.6.0` is already covered by
+>    the organization's grant. Its analysis is clean with no findings, and
+>    two repositories here already use it. …
 >
 > ```suggestion
 > rustpython-vm = "0.6.0"
@@ -170,13 +176,14 @@ And from [#11](../../pull/11), where the fix needs no manifest change:
 > **CVE-2022-24713 / GHSA-m5pq-gvj9-9vr8 (high): regex denial of service.
 > Affected.**
 >
-> `GET /links?match=<regex>` passes the caller's query string straight to
-> `regex::Regex::new(&pattern)` (`api/src/main.rs:49`), so any client can
-> tie up the server with one request.
+> … This code compiles patterns from callers: `GET /links?match=<regex>`
+> passes the query string directly to `regex::Regex::new(&pattern)`
+> (`api/src/main.rs:49`). Any client can therefore send a malicious
+> pattern, and `Cargo.lock` pins `regex 1.5.4`.
 >
-> **Fix:** 1.5.5 fixes it, and the requirement `"1.5.4"` already allows it.
-> Only the lockfile needs to change, with no code changes:
-> `cargo update -p regex --precise 1.5.5`
+> **Fix:** move to `1.5.5`. The requirement `"1.5.4"` (`^1.5.4`) already
+> allows it, so only the lockfile needs to change and no code changes are
+> required: `cargo update -p regex --precise 1.5.5`
 
 By default, the dependency review job only reports (`fail-on: never`), so
 nothing here blocks the merge. With any `fail-on` setting, it reports one
@@ -302,17 +309,17 @@ is folded below. From [#14](../../pull/14)'s check:
 
 > **Gate (`agent`): failed.** Claude found a real risk.
 >
-> **⚠️ Flagged.** Run `42775389107-1`: 3 open findings in 4 jobs, against
-> `master`'s run `42776385308-1`.
+> **⚠️ Flagged.** Run `43166789997-1`: 3 open findings in 4 jobs, against
+> `master`'s run `43166512616-1`.
 >
-> PR #14 adds an `api/build.rs` that uses curl to download LICENSE-MIT from
-> the `main` branch of rust-lang/rust. Nothing pins or checks the download,
-> and `include_str!` builds it into the shipped corral-api binary. All
-> three open findings are this one download, and each is a real risk.
+> The new `api/build.rs` uses curl to download LICENSE-MIT from the moving
+> `main` branch of rust-lang/rust, checks nothing, and `include_str!`
+> embeds that file in the shipped `corral-api` binary. Whatever that URL
+> serves at build time ends up in the artifact.
 >
 > | Finding | Real risk | Why | Next step |
 > |---|---|---|---|
-> | `egress` `corral-api@0.1.0` | **yes** | … The URL points at a moving branch, nothing checks a digest, and the build compiles the result. | Remove the download from build.rs. Commit the license text to the repo (for example `api/LICENSE-MIT`) and use `include_str!("../LICENSE-MIT")`. … |
+> | `egress` `corral-api@0.1.0` | **yes** | … The URL points at a moving branch and nothing checks a digest or signature. The master baseline never contacted this host. | Remove the network call from build.rs. Commit LICENSE-MIT into the repo (for example `api/LICENSE-MIT`) and `include_str!` it from there. … |
 
 ## Quick reference
 
